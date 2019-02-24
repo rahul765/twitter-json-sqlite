@@ -1,0 +1,193 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1671
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww27400\viewh16580\viewkind0
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 \
+In this assignment, you will analyze the political twitter accounts during the campaign of the 2017 UK General Election. The twitter data is available in a dropbox folder (see below). Each data file contains the tweets from candiadtes and parties, and the replies to these accounts. \
+\
+https://www.dropbox.com/sh/ktl1a3672yl6te0/AAA2At9pSt9hZ-KsaT0Mwbp2a?dl=0\
+\
+The file is compressed. When I collected the data, I saved the streamed twitter data every 15 minutes. The condition of streaming is to get the all tweets from the candidates and party official accounts and replies directly sent to these accounts. I randomy selected 10 percent of data files for this assignment. \
+\
+This repository also contains the candiate twitter account information (`candidate_tweet_data_pset8.rda`), so that you can find which are the politician/parties tweets and which are the replies to the accounts.\
+\
+\
+## Download the data and put in a sqlite database\
+\
+There are 113 `tar.gz` files in the folder. In this section, you are asked to process all files into the data set. There can be several strategies, such as using the methods you have already learned in the previous assignments (c.f. `parseTweets`), or you can try an R-package **readtext**. \
+\
+### Create a database\
+\
+```\{r\}\
+library(dplyr)\
+library(DBI)\
+library(readtext)\
+#library(gunzip)\
+library(R.utils)\
+library(rjson)\
+#library(ldply)\
+library(plyr)\
+library(gtools)\
+\
+########################################\
+#initial database\
+db <- dbConnect(RSQLite::SQLite(), "C:\\\\Users\\\\laund\\\\Desktop\\\\R\\\\db\\\\ge_2017.sqlite" )\
+#adding all files path in to a variable\
+filenames <- list.files("C:\\\\Users\\\\laund\\\\Desktop\\\\R\\\\part2tweets\\\\", pattern="*.tar", full.names=TRUE)\
+#********\
+#Extract all the tar.gz files and unpack the second file store it in\
+#C:\\Users\\laund\\Desktop\\R\\problem-set-8-master\\data_twitter\\tmp_json\
+for (i in 1:113)\{\
+  a = untar(filenames[i],list = TRUE)\
+  b=append(b,a[2])\
+  #untar(filenames[i],files=a[2])\
+\}\
+\
+#first json file and convert it to dataframe\
+json_data <- fromJSON(paste(readLines("C:\\\\Users\\\\laund\\\\Desktop\\\\R\\\\problem-set-8-master\\\\data_twitter\\\\tmp_json\\\\tw_json_6_201705261745.json"), collapse="",nullvalue = NA))\
+\
+d_all <- data.frame(t(sapply(json_data,c)))\
+\
+\
+\
+#list way\
+#dd<-data.frame(matrix(nrow=113,ncol=27))\
+dd<-data.frame()\
+\
+\
+for (g in 1:113)\{\
+  #convert json content to a list\
+  json_raw <- fromJSON(paste(readLines(b[g]), collapse=""))\
+  #make the json content to df\
+  idk <- data.frame(t(sapply(json_raw,c)))\
+  \
+  \
+  #d_all <- rbind.fill(d_all,idk)\
+  #dd <- rbind.fill(d_all,idk)\
+  dd <- smartbind(dd,idk)\
+\}\
+\
+#??????????????????jsonfile\
+#?????????????????????????????????\
+\
+\
+\
+\
+\
+#################test\
+\
+b=c()\
+for (i in 1:113)\{\
+  a=untar(filenames[i],list = TRUE)\
+  b=append(b,a[2])\
+\}\
+#b = all the 113 files\
+\
+for (i in 1:113)\{\
+  result=fromJSON(file = b[i])\
+  result=data.frame(result)\
+  write.table(df, "C:/filename_1.csv", col.names=TRUE, sep=",", x =   append=TRUE,row.names = FALSE)\
+\}\
+#read single json file\
+json_data <- fromJSON(paste(readLines("C:\\\\Users\\\\laund\\\\Desktop\\\\R\\\\problem-set-8-master\\\\data_twitter\\\\tmp_json\\\\tw_json_6_201705261830.json"), collapse="",nullvalue = NA))\
+\
+df <- data.frame(t(sapply(json_data,c)))\
+\
+\
+\
+db <- dbConnect(RSQLite::SQLite(), "C:\\\\Users\\\\laund\\\\Desktop\\\\R\\\\db\\\\ge_2017.sqlite" )\
+dbWriteTable(db, "user", result)\
+\
+tt <- read.csv("C:\\\\Users\\\\laund\\\\Desktop\\\\R\\\\db\\\\result.csv", header = TRUE, sep = ",", quote = "\\"",\
+         dec = ".", fill = TRUE, comment.char = "")\
+#Single file process test\
+\
+#first need to set up working dir\
+#setwd('C:\\\\Users\\\\laund\\\\Desktop\\\\R\\\\test\\\\tt') \
+#this is to check whats inside gz.file\
+untar("C:\\\\Users\\\\laund\\\\Desktop\\\\R\\\\test\\\\tt\\\\tw_201705261830.json.tar.gz",list=TRUE)\
+#untar(targetfilepath, which file you want to download)\
+untar("C:\\\\Users\\\\laund\\\\Desktop\\\\R\\\\test\\\\tt\\\\tw_201705261830.json.tar.gz",files="data_twitter/tmp_json/tw_json_6_201705261830.json")\
+#create folder which contrains json files\
+#store json result in a variable\
+result <-  fromJSON(file="data_twitter/tmp_json/tw_json_6_201705261830.json")\
+#result[12] = user_info\
+df <- data.frame(t(sapply(result,c)))\
+\
+\
+```\
+### Create two tables and import the data (15 points)\
+\
+Each JSON file includes both twitter information and user information. You will separate the fields and create two tables: `tweets` and `users`. When you include the data, make sure that there is no duplicates in the `users` and `tweets` table (i.e. `tweet_id` is unique in tweets table, and `user_id` is unique in `users` table). Also make sure that these two tables can be combined afterwards using a field common to two tables. Part of `candidate_tweet_data_pset8.rda` can be in the `users` for the future analysis purpose (at least you need to know which accounts are parties and candidates).\
+\
+\
+```\{r eval = FALSE\}\
+\
+\
+```\
+\
+### Check the data (2 points)\
+\
+How many tweets are in the `tweets` table? \
+How many unique users?\
+\
+```\{r\}\
+\
+```\
+\
+### Description of the data (21 points, 3 per question)\
+\
+Answer the following questions (again try to do most aggregation in the query, not in R):\
+\
+1. Which screen_name has the highest count of tweets?(in user)\
+2. Who has the highest number of followers? \
+3. Among politicians, who has the highest number of followers ?\
+4. Which tweet has the earliest timestamp in the data? Which is the latest?\
+5. Who were the top ten most replied account? How many times?\
+6. How many tweets with the word brexit? \
+7. How many tweets have geolocation information (`lat` or `lon` value)? (You'd be surprised how small the number is.)\
+\
+\
+```\{r\}\
+\
+```\
+\
+### Hashtags and mentions (15 points)\
+\
+We can analyze twitter hashtags and mentions pretty easilty with `quanteda`. Read https://quanteda.io/articles/pkgdown/examples/twitter.html and answer following questions. For creating dfm, you need to create a corpus from a dataframe you created from a sql database (it is like `dbGetQuery() %>% corpus() %>% dfm()`.\
+\
+1. What are the top 10 popular hashtags? How many of them shows up?\
+2. In the network of hashtags, what do you find?\
+3. Who was mentioned (i.e. '@name') the most? How the mentions and hashtags are related?\
+\
+```\{r\}\
+\
+\
+```\
+\
+\
+4. Create a `hashtag` from where there are two fields (`id_str`, `hashtag`). You can use only top 50 hashtags. The example entary of the table looks like this (HINT: the most efficient way I could think of is to use `quanteda::docvars`, `quanteda::convert`, and `tidyr::gather`).\
+```\{r\}\
+load('sample_hashtag_table_entry.rda')\
+sample_hashtag_table_entry %>% knitr::kable()\
+```\
+\
+\
+```\{r\}\
+\
+```\
+\
+\
+### Timesries and cross-sectional plot (12 points)\
+\
+Think about an interesting aggregation of tweets chronologically and draw figures (more than one). You can aggregate the number of tweets by day plus another criteria (e.g. party? hashtags?). Construct a story from the data (preferably that has both time and cross-sectional (e.g. regional/party etc) demension), and support it with table(s) and figure(s).\
+\
+\
+```\{r\}\
+\
+```\
+\
+}
